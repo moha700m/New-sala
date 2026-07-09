@@ -213,6 +213,59 @@ app.get("/api/admin/payments", (req, res) => {
   res.json(rows.map((r) => ({ ...r, raw_response: undefined })));
 });
 
+// ─── Demo Chat API ───────────────────────────────────────────────────────────
+const { generateResponse, EMPLOYEE_KNOWLEDGE } = require("./demo-engine");
+
+/**
+ * GET /api/demo/employees
+ * Returns list of all available AI employees for the marketplace.
+ */
+app.get("/api/demo/employees", (req, res) => {
+  const employees = Object.entries(EMPLOYEE_KNOWLEDGE).map(([id, emp]) => ({
+    id,
+    name: emp.name,
+    role: emp.role,
+  }));
+  res.json(employees);
+});
+
+/**
+ * POST /api/demo/chat
+ * Body: { employeeId, messages: [{role, content}], lang }
+ * Response: Server-Sent Events (SSE) stream of text chunks.
+ *
+ * INTEGRATION POINT: Replace mock responses in demo-engine.js with
+ * real AI (OpenAI, Anthropic, Gemini, OpenRouter) without changing this route.
+ */
+app.post("/api/demo/chat", async (req, res) => {
+  const { employeeId = "sales-employee", messages = [], lang = "ar" } = req.body;
+
+  // Validate message limit (max 10 messages per session)
+  const userMessages = messages.filter(m => m.role === "user");
+  if (userMessages.length > 10) {
+    return res.status(429).json({ error: "demo_limit_reached", message: "Demo limit reached" });
+  }
+
+  // Set up SSE headers
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.flushHeaders();
+
+  try {
+    for await (const chunk of generateResponse(employeeId, messages, lang)) {
+      res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
+    }
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+  } catch (err) {
+    console.error("Demo chat error:", err);
+    res.write(`data: ${JSON.stringify({ error: "Failed to generate response" })}\n\n`);
+  } finally {
+    res.end();
+  }
+});
+
 app.get("/health", (req, res) => res.json({ ok: true, env: NODE_ENV }));
 
 app.listen(PORT, () => {
