@@ -9,6 +9,7 @@ import AuthPage from './pages/auth-page.jsx'
 import OwnerDashboard from './pages/owner-dashboard.jsx'
 import AboutPage from './pages/about-page.jsx'
 import Checkout from './pages/checkout.jsx'
+import AdminDashboard from './pages/admin-dashboard.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -21,6 +22,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/dashboard" element={<OwnerDashboard />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/checkout" element={<Checkout />} />
+        <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
