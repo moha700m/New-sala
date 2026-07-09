@@ -1,0 +1,103 @@
+{
+  "schemaVersion": "2.2",
+  "description": "Agent Souq — full unattended production deployment (Docker, Nginx, HTTPS, DB, health checks).",
+  "parameters": {
+    "Domain": {
+      "type": "String",
+      "description": "Domain/subdomain already pointing (A record) at this instance's public IP",
+      "default": "api.your-domain.com"
+    },
+    "LetsEncryptEmail": {
+      "type": "String",
+      "description": "Email for Let's Encrypt registration/expiry notices",
+      "default": "you@example.com"
+    },
+    "RepoUrl": {
+      "type": "String",
+      "description": "Git URL of the GitHub repo (e.g. https://github.com/<you>/agent-souq.git)",
+      "default": ""
+    }
+  },
+  "mainSteps": [
+    {
+      "action": "aws:runShellScript",
+      "name": "deployAgentSouq",
+      "inputs": {
+        "timeoutSeconds": "3600",
+        "runCommand": [
+          "#!/usr/bin/env bash",
+          "set -euo pipefail",
+          "export DEBIAN_FRONTEND=noninteractive",
+          "DOMAIN='{{ Domain }}'",
+          "EMAIL='{{ LetsEncryptEmail }}'",
+          "REPO='{{ RepoUrl }}'",
+          "APP_DIR='/opt/agent-souq/repo/backend'",
+          "echo '== Step 3: OS update =='",
+          "apt-get update -y && apt-get upgrade -y && apt-get autoremove -y",
+          "echo '== Step 4: dependencies =='",
+          "command -v docker >/dev/null 2>&1 || (curl -fsSL https://get.docker.com | sh)",
+          "apt-get install -y docker-compose-plugin git nginx certbot python3-certbot-nginx ufw fail2ban unattended-upgrades openssl host",
+          "command -v node >/dev/null 2>&1 || (curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs build-essential python3)",
+          "echo '== Step 16: swap for small instances =='",
+          "if ! swapon --show | grep -q '/swapfile'; then fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile && echo '/swapfile none swap sw 0 0' >> /etc/fstab; fi",
+          "echo '== Step 5: fetch project =='",
+          "mkdir -p /opt/agent-souq",
+          "if [ -z \"$REPO\" ]; then echo 'ERROR: RepoUrl is required. Pass your GitHub repo URL.'; exit 1; fi",
+          "rm -rf /opt/agent-souq/repo && git clone \"$REPO\" /opt/agent-souq/repo",
+          "if [ ! -f \"$APP_DIR/server.js\" ]; then echo 'ERROR: backend/server.js not found in the cloned repo at '$APP_DIR; exit 1; fi",
+          "cd \"$APP_DIR\"",
+          "echo '== Step 6: env vars (generate secrets, keep real Moyasar keys you set) =='",
+          "if [ ! -f .env ]; then echo 'ERROR: .env missing. Upload it via Parameter Store / S3 first (see RUNBOOK-SSM.md) — never bake secret keys into the SSM document.'; exit 1; fi",
+          "if grep -q 'YOUR_MOYASAR_SECRET_KEY_HERE' .env; then echo 'ERROR: .env still has placeholder Moyasar keys.'; exit 1; fi",
+          "sed -i \"s#CALLBACK_URL=.*#CALLBACK_URL=https://$DOMAIN/api/payments/callback#\" .env",
+          "grep -q '^NODE_ENV=production' .env || sed -i 's#NODE_ENV=.*#NODE_ENV=production#' .env",
+          "echo '== Step 7: build =='",
+          "docker compose build",
+          "echo '== Step 8: database init =='",
+          "mkdir -p data public/.well-known",
+          "node -e \"require('./db.js'); console.log('DB schema OK')\"",
+          "echo '== Step 9: start with auto-restart =='",
+          "docker compose up -d",
+          "sleep 4 && docker compose ps",
+          "echo '== Step 10: nginx reverse proxy =='",
+          "cat > /etc/nginx/sites-available/agent-souq-api <<NGINX",
+          "server {",
+          "  listen 80;",
+          "  server_name $DOMAIN;",
+          "  location /.well-known/apple-developer-merchantid-domain-association { proxy_pass http://127.0.0.1:4000; }",
+          "  location / {",
+          "    proxy_pass http://127.0.0.1:4000;",
+          "    proxy_http_version 1.1;",
+          "    proxy_set_header Host \\$host;",
+          "    proxy_set_header X-Real-IP \\$remote_addr;",
+          "    proxy_set_header X-Forwarded-For \\$proxy_add_x_forwarded_for;",
+          "    proxy_set_header X-Forwarded-Proto \\$scheme;",
+          "  }",
+          "}",
+          "NGINX",
+          "ln -sf /etc/nginx/sites-available/agent-souq-api /etc/nginx/sites-enabled/agent-souq-api",
+          "rm -f /etc/nginx/sites-enabled/default",
+          "nginx -t && systemctl reload nginx",
+          "echo '== Step 11: HTTPS via Let\\'s Encrypt =='",
+          "if host \"$DOMAIN\" >/dev/null 2>&1; then certbot --nginx -d \"$DOMAIN\" -m \"$EMAIL\" --agree-tos --redirect -n || echo 'certbot failed — check DNS'; else echo 'DNS for '$DOMAIN' not resolving yet; skipping certbot. Re-run after A record points here.'; fi",
+          "echo '== Step 17: enable on boot =='",
+          "systemctl enable docker nginx",
+          "echo '== Step 18: firewall + hardening =='",
+          "ufw allow OpenSSH && ufw allow 'Nginx Full' && ufw --force enable",
+          "systemctl enable fail2ban --now",
+          "dpkg-reconfigure -f noninteractive unattended-upgrades || true",
+          "echo '== Step 12-14: health checks =='",
+          "sleep 2",
+          "curl -fsS http://127.0.0.1:4000/health && echo ' <- local health OK' || (echo 'LOCAL HEALTH FAILED'; docker compose logs --tail=50)",
+          "ADMIN_KEY=$(grep ADMIN_API_KEY .env | cut -d= -f2)",
+          "curl -fsS -H \"x-admin-key: $ADMIN_KEY\" http://127.0.0.1:4000/api/admin/payments >/dev/null && echo 'DB endpoint OK' || echo 'DB endpoint check failed'",
+          "curl -fsS https://$DOMAIN/health >/dev/null 2>&1 && echo 'PUBLIC HTTPS OK' || echo 'Public HTTPS not verified (DNS/cert pending)'",
+          "echo '== Step 19: cleanup =='",
+          "apt-get autoremove -y && apt-get clean && docker image prune -f",
+          "echo '== DONE =='",
+          "echo \"Production URL: https://$DOMAIN\""
+        ]
+      }
+    }
+  ]
+}

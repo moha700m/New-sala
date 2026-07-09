@@ -1,0 +1,19 @@
+{
+  "name": "agent-souq-payments",
+  "version": "1.0.0",
+  "description": "Backend service that integrates Agent Souq checkout with Moyasar (Mada / Visa / Mastercard / Apple Pay) for the Saudi market",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "migrate": "node db.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "dotenv": "^16.4.5",
+    "cors": "^2.8.5",
+    "better-sqlite3": "^11.3.0",
+    "uuid": "^9.0.1"
+  }
+}
