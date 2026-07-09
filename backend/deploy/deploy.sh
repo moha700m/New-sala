@@ -15,7 +15,7 @@ set -euo pipefail
 # ---------- EDIT THESE THREE VALUES BEFORE RUNNING ----------
 DOMAIN="api.your-domain.com"       # must already point (A record) at 13.62.54.243
 LETSENCRYPT_EMAIL="you@example.com"
-APP_DIR="/opt/agent-souq/moyasar-backend"
+APP_DIR="/opt/agent-souq/repo/backend"
 # --------------------------------------------------------------
 
 log()  { echo -e "\n\033[1;36m▶ $1\033[0m"; }
@@ -93,7 +93,7 @@ fi
 log "Step 5/20 — Checking project files"
 if [[ ! -f "$APP_DIR/server.js" ]]; then
   echo "ERROR: $APP_DIR/server.js not found."
-  echo "Upload the moyasar-backend/ folder there first — see RUNBOOK.md — then re-run this script."
+  echo "Clone the repo to /opt/agent-souq/repo first (git clone https://github.com/moha700m/New-sala.git) — see RUNBOOK.md — then re-run this script."
   exit 1
 fi
 ok "Project found at $APP_DIR"

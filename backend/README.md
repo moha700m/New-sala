@@ -25,7 +25,7 @@ Moyasar  →  paid / failed / needs 3-D Secure (transactionUrl)
 ## 1. Local setup
 
 ```bash
-cd moyasar-backend
+cd backend
 cp .env.example .env
 # paste your Moyasar test keys + a random MOYASAR_WEBHOOK_SECRET + ADMIN_API_KEY into .env
 npm install
@@ -81,7 +81,7 @@ these steps assume Ubuntu on that same box, run over SSH.
 ```bash
 # on the VPS
 sudo apt update && sudo apt install -y docker.io docker-compose-plugin
-git clone <your-repo-url> agent-souq-payments && cd agent-souq-payments/moyasar-backend
+git clone https://github.com/moha700m/New-sala.git agent-souq && cd agent-souq/backend
 cp .env.example .env   # edit with real keys + NODE_ENV=production
 sudo docker compose up -d --build
 ```
@@ -92,7 +92,7 @@ sudo docker compose up -d --build
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
 sudo apt install -y nodejs build-essential python3
 npm install -g pm2
-git clone <your-repo-url> agent-souq-payments && cd agent-souq-payments/moyasar-backend
+git clone https://github.com/moha700m/New-sala.git agent-souq && cd agent-souq/backend
 cp .env.example .env   # edit with real keys + NODE_ENV=production
 npm install
 pm2 start ecosystem.config.js --env production

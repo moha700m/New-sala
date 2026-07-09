@@ -16,21 +16,21 @@ chmod 400 ~/Downloads/Ag_4.pem   # wherever you saved it
 
 ## 2. Upload the project to the server
 
-From the folder containing `moyasar-backend/` on your machine:
+From the repo root (containing `backend/`) on your machine:
 
 ```bash
 ssh -i ~/Downloads/Ag_4.pem ubuntu@13.62.54.243 "sudo mkdir -p /opt/agent-souq && sudo chown ubuntu:ubuntu /opt/agent-souq"
 
 rsync -avz -e "ssh -i ~/Downloads/Ag_4.pem" \
   --exclude 'node_modules' --exclude 'data' --exclude '.env' \
-  ./moyasar-backend/ ubuntu@13.62.54.243:/opt/agent-souq/moyasar-backend/
+  ./backend/ ubuntu@13.62.54.243:/opt/agent-souq/repo/backend/
 ```
 
 ## 3. SSH in and fill in your real secrets
 
 ```bash
 ssh -i ~/Downloads/Ag_4.pem ubuntu@13.62.54.243
-cd /opt/agent-souq/moyasar-backend
+cd /opt/agent-souq/repo/backend
 cp .env.example .env
 nano .env
 ```

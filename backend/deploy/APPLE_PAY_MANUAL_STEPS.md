@@ -8,7 +8,7 @@ Developer account and identity verification):
 2. **Create a Merchant ID** under Certificates, Identifiers & Profiles → Identifiers → Merchant IDs.
 3. **Domain verification** — Apple gives you a file named
    `apple-developer-merchantid-domain-association`. Place it at:
-   `moyasar-backend/public/.well-known/apple-developer-merchantid-domain-association`
+   `backend/public/.well-known/apple-developer-merchantid-domain-association`
    on the server, then it's served automatically (server.js already serves
    `public/` as static files, and nginx/deploy.sh already route
    `/.well-known/...` through to it).

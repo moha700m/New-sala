@@ -14,8 +14,8 @@
     },
     "RepoUrl": {
       "type": "String",
-      "description": "Git URL of the GitHub repo (e.g. https://github.com/<you>/agent-souq.git)",
-      "default": ""
+      "description": "Git URL of the GitHub repo (https://github.com/moha700m/New-sala.git)",
+      "default": "https://github.com/moha700m/New-sala.git"
     }
   },
   "mainSteps": [

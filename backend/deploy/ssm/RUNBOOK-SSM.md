@@ -51,7 +51,7 @@ the full server-side output, ending with your production URL.
 
 Runs `agent-souq-deploy-document.json`, which performs: OS update · installs
 Docker + Compose + Node + Nginx + Certbot + ufw/fail2ban · 2 GB swap · fetches
-project (from `RepoUrl`, or expects it pre-uploaded) · loads the encrypted
+project (`git clone` over HTTPS from your GitHub repo) · loads the encrypted
 `.env` · `docker compose build` · SQLite schema init · `docker compose up -d`
 with `restart: unless-stopped` · Nginx reverse proxy · Let's Encrypt HTTPS ·
 enables services on boot · firewall + auto security updates · local + DB +
@@ -59,16 +59,18 @@ public health checks · cleanup · prints the final URL.
 
 ## Getting the project onto the box
 
-Two options, pick one:
+The deploy document clones directly from GitHub over HTTPS:
 
-- **RepoUrl (simplest):** push `moyasar-backend/` to a Git repo and set
-  `REPO_URL` in `02-run-deploy.sh`. The document clones it.
-- **S3 pre-upload:** `aws s3 cp --recursive ./moyasar-backend s3://your-bucket/moyasar-backend`
-  then add an `aws s3 cp` line at the top of the document's steps. (Ask me
-  and I'll wire this variant in if you prefer S3 over Git.)
+    https://github.com/moha700m/New-sala.git
 
-Note: `00-upload-secrets.sh` writes `.env` directly, so even the Git/S3 copy
-never needs to contain your secrets.
+This URL is already set as the default in both `02-run-deploy.sh` (`REPO_URL`)
+and the SSM document (`RepoUrl` parameter), so there's nothing to edit — the
+document runs `git clone` into `/opt/agent-souq/repo` and deploys from
+`backend/`.
+
+Note: `00-upload-secrets.sh` writes `.env` directly onto the instance, so the
+cloned repo never needs to contain your secrets (and it doesn't — `.gitignore`
+keeps `.env` out).
 
 ## Verifying afterward (also no SSH)
 

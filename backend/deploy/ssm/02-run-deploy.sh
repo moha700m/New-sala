@@ -14,7 +14,7 @@ INSTANCE_IP="13.62.54.243"
 REGION="eu-north-1"
 DOMAIN="api.your-domain.com"
 EMAIL="you@example.com"
-REPO_URL=""                       # optional: git URL of your repo; blank if pre-uploaded via S3
+REPO_URL="https://github.com/moha700m/New-sala.git"   # GitHub source over HTTPS
 DOC_NAME="AgentSouqDeploy"
 # --------------------------------
 

@@ -39,7 +39,7 @@ Put your repo URL into the SSM deploy trigger:
 
 ```bash
 cd backend/deploy/ssm
-# edit 02-run-deploy.sh → set REPO_URL="https://github.com/<you>/agent-souq.git"
+# edit 02-run-deploy.sh → set REPO_URL="https://github.com/moha700m/New-sala.git"
 ./02-run-deploy.sh
 ```
 
