@@ -1,25 +1,22 @@
 /**
  * Admin Dashboard — Agent Souq
- * لوحة تحكم المالك — تعرض المستخدمين والطلبات والإيرادات
- * محمية: فقط المالك (admin) يقدر يدخل
+ * لوحة تحكم المالك — محمية بـ local login (يوزر + باسورد)
  */
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Sparkles, Globe, Users, ShoppingBag, TrendingUp, DollarSign,
-  LogOut, RefreshCw, Search, ChevronDown, Eye, CheckCircle,
-  XCircle, Clock, BarChart2, Settings, Bell, Shield, Loader2,
-  ArrowUpRight, ArrowDownRight, MessageCircle, Star, Package,
-  Calendar, Filter, Download, MoreVertical, UserCheck, AlertCircle
+  LogOut, RefreshCw, Search, BarChart2, Shield, Loader2,
+  ArrowUpRight, ArrowDownRight, UserCheck, Eye, EyeOff, Lock
 } from 'lucide-react'
-import { getSession, getUser, signOut, supabase } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 
 /* ─── Fonts ─────────────────────────────────────────────── */
 const FontImport = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
-    .font-ar { font-family: 'Tajawal', 'IBM Plex Sans Arabic', sans-serif; }
-    .font-en { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=Space+Grotesk:wght@500;600;700&display=swap');
+    .font-ar { font-family: 'Tajawal', sans-serif; }
+    .font-en { font-family: 'Space Grotesk', sans-serif; }
   `}</style>
 )
 
@@ -39,6 +36,11 @@ function SaduBand() {
     </div>
   )
 }
+
+/* ─── ADMIN CREDENTIALS ──────────────────────────────────── */
+// بيانات الدخول الثابتة للأدمن — غيّرها حسب رغبتك
+const ADMIN_USER = 'admin'
+const ADMIN_PASS = 'AgentSouq2025!'
 
 /* ─── Stat Card ─────────────────────────────────────────── */
 function StatCard({ icon: Icon, label, value, delta, up, color, loading }) {
@@ -68,10 +70,10 @@ function StatCard({ icon: Icon, label, value, delta, up, color, loading }) {
 /* ─── Status Badge ───────────────────────────────────────── */
 function StatusBadge({ status }) {
   const map = {
-    active:    { label: 'نشط',     cls: 'bg-green-50 text-green-700 border-green-200' },
-    cancelled: { label: 'ملغي',    cls: 'bg-red-50 text-red-600 border-red-200' },
-    pending:   { label: 'معلّق',   cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-    paid:      { label: 'مدفوع',   cls: 'bg-teal-50 text-teal-700 border-teal-200' },
+    active:    { label: 'نشط',    cls: 'bg-green-50 text-green-700 border-green-200' },
+    cancelled: { label: 'ملغي',   cls: 'bg-red-50 text-red-600 border-red-200' },
+    pending:   { label: 'معلّق',  cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+    paid:      { label: 'مدفوع',  cls: 'bg-teal-50 text-teal-700 border-teal-200' },
   }
   const s = map[status] || map.pending
   return (
@@ -87,10 +89,10 @@ function MiniBarChart({ data, color = '#f59e0b' }) {
   return (
     <div className="flex items-end gap-1 h-12">
       {data.map((v, i) => (
-        <div key={i} className="flex-1 rounded-sm transition-all" style={{
+        <div key={i} className="flex-1 rounded-sm" style={{
           height: `${(v / max) * 100}%`,
           backgroundColor: color,
-          opacity: i === data.length - 1 ? 1 : 0.4 + (i / data.length) * 0.5,
+          opacity: 0.4 + (i / data.length) * 0.6,
           minHeight: 2,
         }} />
       ))}
@@ -98,77 +100,167 @@ function MiniBarChart({ data, color = '#f59e0b' }) {
   )
 }
 
-/* ─── ADMIN EMAIL ────────────────────────────────────────── */
-// غيّر هذا لإيميلك الحقيقي
-const ADMIN_EMAIL = 'moha700m@gmail.com'
+/* ─── Login Screen ───────────────────────────────────────── */
+function AdminLogin({ onLogin }) {
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPass, setShowPass] = useState(false)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-/* ─── Main Component ─────────────────────────────────────── */
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    setTimeout(() => {
+      if (username.trim() === ADMIN_USER && password === ADMIN_PASS) {
+        // Save to sessionStorage so refresh keeps you logged in
+        sessionStorage.setItem('admin_auth', 'true')
+        onLogin()
+      } else {
+        setError('اليوزر أو الباسورد غلط — حاول مرة ثانية')
+      }
+      setLoading(false)
+    }, 600)
+  }
+
+  return (
+    <div dir="rtl" className="min-h-screen bg-stone-950 flex flex-col font-ar">
+      <FontImport />
+      <SaduBand />
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          {/* Logo */}
+          <div className="text-center mb-8">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500 flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="w-7 h-7 text-stone-950" />
+            </div>
+            <h1 className="text-2xl font-bold text-stone-50">سوق الموظفين</h1>
+            <p className="text-stone-400 text-sm mt-1 flex items-center justify-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-amber-400" />
+              لوحة تحكم المالك
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="bg-stone-900 border border-stone-800 rounded-2xl p-6 space-y-4">
+            <div>
+              <label className="text-xs font-medium text-stone-400 mb-1.5 block">اليوزر</label>
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="أدخل اليوزر"
+                className="w-full bg-stone-800 border border-stone-700 rounded-xl px-4 py-3 text-stone-50 placeholder:text-stone-500 outline-none focus:border-amber-500 transition-colors text-sm"
+                required
+                autoComplete="username"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-stone-400 mb-1.5 block">الباسورد</label>
+              <div className="relative">
+                <input
+                  type={showPass ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="أدخل الباسورد"
+                  className="w-full bg-stone-800 border border-stone-700 rounded-xl px-4 py-3 text-stone-50 placeholder:text-stone-500 outline-none focus:border-amber-500 transition-colors text-sm pr-12"
+                  required
+                  autoComplete="current-password"
+                />
+                <button type="button" onClick={() => setShowPass(!showPass)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300">
+                  {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-red-950 border border-red-800 rounded-xl px-4 py-3 text-red-400 text-sm">
+                {error}
+              </div>
+            )}
+
+            <button type="submit" disabled={loading}
+              className="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-70">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+              {loading ? 'جاري التحقق...' : 'دخول'}
+            </button>
+          </form>
+
+          {/* Hint box */}
+          <div className="mt-4 bg-stone-900/50 border border-stone-800 rounded-xl p-4 text-center">
+            <p className="text-xs text-stone-500 mb-1">بيانات الدخول الافتراضية:</p>
+            <p className="text-xs text-amber-400 font-mono">
+              يوزر: <span className="text-stone-300">admin</span>
+              &nbsp;&nbsp;|&nbsp;&nbsp;
+              باسورد: <span className="text-stone-300">AgentSouq2025!</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Main Dashboard ─────────────────────────────────────── */
 export default function AdminDashboard() {
   const navigate = useNavigate()
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [lang, setLang] = useState('ar')
-  const [user, setUser] = useState(null)
-  const [authLoading, setAuthLoading] = useState(true)
   const [dataLoading, setDataLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
   const [searchQ, setSearchQ] = useState('')
   const [orderFilter, setOrderFilter] = useState('all')
 
-  // Data state
   const [stats, setStats] = useState({ users: 0, orders: 0, revenue: 0, active: 0 })
   const [orders, setOrders] = useState([])
   const [users, setUsers] = useState([])
-  const [revenueChart, setRevenueChart] = useState([12, 19, 8, 25, 31, 22, 40, 35, 28, 45, 38, 52])
+  const revenueChart = [12, 19, 8, 25, 31, 22, 40, 35, 28, 45, 38, 52]
 
   const isAr = lang === 'ar'
   const dir = isAr ? 'rtl' : 'ltr'
   const font = isAr ? 'font-ar' : 'font-en'
 
-  /* Auth guard */
+  // Check session on mount
   useEffect(() => {
-    getSession().then(session => {
-      if (!session) { navigate('/auth'); return }
-      getUser().then(u => {
-        setUser(u)
-        // Check if admin
-        if (u?.email !== ADMIN_EMAIL && u?.user_metadata?.role !== 'admin') {
-          // Allow access but show limited view — or redirect:
-          // navigate('/dashboard'); return
-        }
-        setAuthLoading(false)
-        loadData()
-      })
-    })
-  }, [navigate])
+    if (sessionStorage.getItem('admin_auth') === 'true') {
+      setIsLoggedIn(true)
+      loadData()
+    }
+  }, [])
 
-  /* Load data from Supabase */
+  const handleLogin = () => {
+    setIsLoggedIn(true)
+    loadData()
+  }
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('admin_auth')
+    setIsLoggedIn(false)
+  }
+
   const loadData = async () => {
     setDataLoading(true)
     try {
-      // Load orders
       const { data: ordersData } = await supabase
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(50)
+        .limit(100)
 
       if (ordersData) {
         setOrders(ordersData)
         const totalRevenue = ordersData.reduce((s, o) => s + (parseFloat(o.amount) || 0), 0)
         const activeOrders = ordersData.filter(o => o.status === 'active').length
-        setStats(prev => ({
-          ...prev,
-          orders: ordersData.length,
-          revenue: totalRevenue,
-          active: activeOrders,
-        }))
+        setStats(prev => ({ ...prev, orders: ordersData.length, revenue: totalRevenue, active: activeOrders }))
       }
 
-      // Load profiles
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(50)
+        .limit(100)
 
       if (profilesData) {
         setUsers(profilesData)
@@ -181,18 +273,9 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleSignOut = async () => { await signOut(); navigate('/') }
+  // Show login screen if not authenticated
+  if (!isLoggedIn) return <AdminLogin onLogin={handleLogin} />
 
-  if (authLoading) return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-50">
-      <div className="text-center">
-        <Loader2 className="w-10 h-10 animate-spin text-amber-500 mx-auto mb-3" />
-        <p className={`text-stone-500 text-sm ${font}`}>{isAr ? 'جاري التحقق...' : 'Verifying...'}</p>
-      </div>
-    </div>
-  )
-
-  /* Filtered orders */
   const filteredOrders = orders.filter(o => {
     const matchSearch = !searchQ ||
       (o.employee_name || '').includes(searchQ) ||
@@ -203,16 +286,16 @@ export default function AdminDashboard() {
   })
 
   const statCards = [
-    { icon: Users, label: isAr ? 'إجمالي المستخدمين' : 'Total Users', value: stats.users.toLocaleString(), delta: '+12%', up: true, color: 'bg-blue-50 text-blue-600' },
-    { icon: ShoppingBag, label: isAr ? 'إجمالي الطلبات' : 'Total Orders', value: stats.orders.toLocaleString(), delta: '+8%', up: true, color: 'bg-amber-50 text-amber-600' },
-    { icon: DollarSign, label: isAr ? 'الإيرادات (ريال)' : 'Revenue (SAR)', value: `${stats.revenue.toLocaleString()} ﷼`, delta: '+23%', up: true, color: 'bg-green-50 text-green-600' },
-    { icon: UserCheck, label: isAr ? 'اشتراكات نشطة' : 'Active Subscriptions', value: stats.active.toLocaleString(), delta: '+5%', up: true, color: 'bg-teal-50 text-teal-600' },
+    { icon: Users,       label: isAr ? 'إجمالي المستخدمين' : 'Total Users',          value: stats.users.toLocaleString(),                    delta: '+12%', up: true, color: 'bg-blue-50 text-blue-600' },
+    { icon: ShoppingBag, label: isAr ? 'إجمالي الطلبات'    : 'Total Orders',          value: stats.orders.toLocaleString(),                   delta: '+8%',  up: true, color: 'bg-amber-50 text-amber-600' },
+    { icon: DollarSign,  label: isAr ? 'الإيرادات (ريال)'  : 'Revenue (SAR)',         value: `${stats.revenue.toLocaleString()} ﷼`,           delta: '+23%', up: true, color: 'bg-green-50 text-green-600' },
+    { icon: UserCheck,   label: isAr ? 'اشتراكات نشطة'     : 'Active Subscriptions',  value: stats.active.toLocaleString(),                   delta: '+5%',  up: true, color: 'bg-teal-50 text-teal-600' },
   ]
 
   const tabs = [
     { id: 'overview', label: isAr ? 'نظرة عامة' : 'Overview', icon: BarChart2 },
-    { id: 'orders', label: isAr ? 'الطلبات' : 'Orders', icon: ShoppingBag },
-    { id: 'users', label: isAr ? 'المستخدمون' : 'Users', icon: Users },
+    { id: 'orders',   label: isAr ? 'الطلبات'   : 'Orders',   icon: ShoppingBag },
+    { id: 'users',    label: isAr ? 'المستخدمون': 'Users',    icon: Users },
   ]
 
   return (
@@ -249,12 +332,10 @@ export default function AdminDashboard() {
               <RefreshCw className={`w-4 h-4 ${dataLoading ? 'animate-spin' : ''}`} />
             </button>
             <div className="flex items-center gap-2 border border-stone-700 rounded-xl px-3 py-2">
-              <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center text-xs font-bold text-stone-950">
-                {user?.email?.[0]?.toUpperCase() || 'A'}
-              </div>
-              <span className="text-xs text-stone-300 hidden sm:block max-w-[120px] truncate">{user?.email}</span>
+              <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center text-xs font-bold text-stone-950">A</div>
+              <span className="text-xs text-stone-300 hidden sm:block">Admin</span>
             </div>
-            <button onClick={handleSignOut}
+            <button onClick={handleLogout}
               className="flex items-center gap-1.5 text-xs text-red-400 border border-red-900 rounded-xl px-3 py-2 hover:bg-red-950 transition-colors">
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden sm:block">{isAr ? 'خروج' : 'Sign Out'}</span>
@@ -269,15 +350,13 @@ export default function AdminDashboard() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold">{isAr ? '🏠 لوحة تحكم المالك' : '🏠 Admin Dashboard'}</h1>
           <p className="text-stone-500 text-sm mt-1">
-            {isAr ? `مرحباً ${user?.user_metadata?.full_name || user?.email} — إليك ملخص موقعك` : `Welcome ${user?.user_metadata?.full_name || user?.email} — here's your site overview`}
+            {isAr ? 'مرحباً — إليك ملخص موقعك' : 'Welcome — here\'s your site overview'}
           </p>
         </div>
 
         {/* ── Stat Cards ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {statCards.map((s, i) => (
-            <StatCard key={i} {...s} loading={dataLoading} />
-          ))}
+          {statCards.map((s, i) => <StatCard key={i} {...s} loading={dataLoading} />)}
         </div>
 
         {/* ── Tabs ── */}
@@ -285,9 +364,7 @@ export default function AdminDashboard() {
           {tabs.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === tab.id
-                  ? 'bg-stone-950 text-white shadow-sm'
-                  : 'text-stone-600 hover:text-stone-900'
+                activeTab === tab.id ? 'bg-stone-950 text-white shadow-sm' : 'text-stone-600 hover:text-stone-900'
               }`}>
               <tab.icon className="w-4 h-4" />
               {tab.label}
@@ -295,37 +372,33 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* ── Overview Tab ── */}
+        {/* ── Overview ── */}
         {activeTab === 'overview' && (
           <div className="grid lg:grid-cols-3 gap-6">
-            {/* Revenue chart */}
             <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-stone-200 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="font-bold">{isAr ? 'الإيرادات الشهرية' : 'Monthly Revenue'}</h3>
                   <p className="text-xs text-stone-500 mt-0.5">{isAr ? 'آخر 12 شهر' : 'Last 12 months'}</p>
                 </div>
-                <span className="text-2xl font-bold font-en text-green-600">
-                  {stats.revenue.toLocaleString()} ﷼
-                </span>
+                <span className="text-2xl font-bold font-en text-green-600">{stats.revenue.toLocaleString()} ﷼</span>
               </div>
               <MiniBarChart data={revenueChart} color="#f59e0b" />
               <div className="flex justify-between mt-2">
-                {['يول', 'أغ', 'سب', 'أكت', 'نوف', 'ديس', 'يناير', 'فبر', 'مارس', 'أبر', 'مايو', 'يون'].map((m, i) => (
+                {['يول','أغ','سب','أكت','نوف','ديس','يناير','فبر','مارس','أبر','مايو','يون'].map((m,i) => (
                   <span key={i} className="text-xs text-stone-400">{m}</span>
                 ))}
               </div>
             </div>
 
-            {/* Quick stats */}
             <div className="space-y-4">
               <div className="bg-white rounded-2xl p-5 border border-stone-200 shadow-sm">
                 <h3 className="font-bold mb-4 text-sm">{isAr ? 'أكثر الموظفين طلباً' : 'Top Employees'}</h3>
                 {[
-                  { name: isAr ? 'موظف المبيعات' : 'Sales Employee', pct: 38, color: '#f59e0b' },
-                  { name: isAr ? 'خدمة العملاء' : 'Customer Service', pct: 27, color: '#0f766e' },
-                  { name: isAr ? 'موظف المحتوى' : 'Content Employee', pct: 21, color: '#6366f1' },
-                  { name: isAr ? 'موظف التسويق' : 'Marketing', pct: 14, color: '#ec4899' },
+                  { name: isAr ? 'موظف المبيعات'  : 'Sales',          pct: 38, color: '#f59e0b' },
+                  { name: isAr ? 'خدمة العملاء'   : 'Customer Svc',   pct: 27, color: '#0f766e' },
+                  { name: isAr ? 'موظف المحتوى'   : 'Content',        pct: 21, color: '#6366f1' },
+                  { name: isAr ? 'موظف التسويق'   : 'Marketing',      pct: 14, color: '#ec4899' },
                 ].map((e, i) => (
                   <div key={i} className="mb-3">
                     <div className="flex justify-between text-xs mb-1">
@@ -347,21 +420,20 @@ export default function AdminDashboard() {
                 <p className="text-xs text-amber-700 leading-relaxed">
                   {isAr
                     ? 'أضف موظفين جدد لزيادة الإيرادات. المواقع التي تضيف موظفاً جديداً شهرياً تحقق 40% نمو أكثر.'
-                    : 'Add new employees to grow revenue. Sites adding a new employee monthly see 40% more growth.'}
+                    : 'Add new employees monthly to grow revenue by 40% more.'}
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* ── Orders Tab ── */}
+        {/* ── Orders ── */}
         {activeTab === 'orders' && (
           <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-stone-100 flex flex-wrap items-center justify-between gap-3">
               <h3 className="font-bold">{isAr ? 'جميع الطلبات' : 'All Orders'} ({filteredOrders.length})</h3>
               <div className="flex items-center gap-2">
-                {/* Search */}
-                <div className="flex items-center gap-2 border border-stone-200 rounded-xl px-3 py-2 text-sm">
+                <div className="flex items-center gap-2 border border-stone-200 rounded-xl px-3 py-2">
                   <Search className="w-3.5 h-3.5 text-stone-400" />
                   <input
                     className="outline-none bg-transparent text-sm placeholder:text-stone-400 w-36"
@@ -371,12 +443,8 @@ export default function AdminDashboard() {
                     dir={isAr ? 'rtl' : 'ltr'}
                   />
                 </div>
-                {/* Filter */}
-                <select
-                  value={orderFilter}
-                  onChange={e => setOrderFilter(e.target.value)}
-                  className="border border-stone-200 rounded-xl px-3 py-2 text-sm outline-none bg-white"
-                >
+                <select value={orderFilter} onChange={e => setOrderFilter(e.target.value)}
+                  className="border border-stone-200 rounded-xl px-3 py-2 text-sm outline-none bg-white">
                   <option value="all">{isAr ? 'الكل' : 'All'}</option>
                   <option value="active">{isAr ? 'نشط' : 'Active'}</option>
                   <option value="cancelled">{isAr ? 'ملغي' : 'Cancelled'}</option>
@@ -400,14 +468,7 @@ export default function AdminDashboard() {
                 <table className="w-full text-sm">
                   <thead className="bg-stone-50 border-b border-stone-100">
                     <tr>
-                      {[
-                        isAr ? 'رقم الطلب' : 'Order ID',
-                        isAr ? 'الموظف' : 'Employee',
-                        isAr ? 'الخطة' : 'Plan',
-                        isAr ? 'المبلغ' : 'Amount',
-                        isAr ? 'الحالة' : 'Status',
-                        isAr ? 'التاريخ' : 'Date',
-                      ].map((h, i) => (
+                      {[isAr?'رقم الطلب':'Order ID', isAr?'الموظف':'Employee', isAr?'الخطة':'Plan', isAr?'المبلغ':'Amount', isAr?'الحالة':'Status', isAr?'التاريخ':'Date'].map((h,i) => (
                         <th key={i} className="text-right px-4 py-3 text-xs font-semibold text-stone-500 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -415,21 +476,13 @@ export default function AdminDashboard() {
                   <tbody className="divide-y divide-stone-50">
                     {filteredOrders.map((order, i) => (
                       <tr key={order.id || i} className="hover:bg-stone-50 transition-colors">
-                        <td className="px-4 py-3 font-mono text-xs text-stone-400">
-                          #{(order.id || '').slice(0, 8)}
-                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-stone-400">#{(order.id||'').slice(0,8)}</td>
                         <td className="px-4 py-3 font-medium">{order.employee_name || '—'}</td>
                         <td className="px-4 py-3 text-stone-600">{order.plan || '—'}</td>
-                        <td className="px-4 py-3 font-semibold text-green-700">
-                          {parseFloat(order.amount || 0).toLocaleString()} ﷼
-                        </td>
-                        <td className="px-4 py-3">
-                          <StatusBadge status={order.status || 'pending'} />
-                        </td>
+                        <td className="px-4 py-3 font-semibold text-green-700">{parseFloat(order.amount||0).toLocaleString()} ﷼</td>
+                        <td className="px-4 py-3"><StatusBadge status={order.status||'pending'} /></td>
                         <td className="px-4 py-3 text-stone-500 text-xs whitespace-nowrap">
-                          {order.created_at
-                            ? new Date(order.created_at).toLocaleDateString('ar-SA')
-                            : '—'}
+                          {order.created_at ? new Date(order.created_at).toLocaleDateString('ar-SA') : '—'}
                         </td>
                       </tr>
                     ))}
@@ -440,13 +493,12 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ── Users Tab ── */}
+        {/* ── Users ── */}
         {activeTab === 'users' && (
           <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-stone-100 flex items-center justify-between">
+            <div className="p-5 border-b border-stone-100">
               <h3 className="font-bold">{isAr ? 'المستخدمون المسجّلون' : 'Registered Users'} ({users.length})</h3>
             </div>
-
             {dataLoading ? (
               <div className="p-10 text-center">
                 <Loader2 className="w-8 h-8 animate-spin text-amber-500 mx-auto mb-2" />
@@ -455,36 +507,31 @@ export default function AdminDashboard() {
               <div className="p-10 text-center">
                 <Users className="w-10 h-10 text-stone-300 mx-auto mb-2" />
                 <p className="text-stone-400 text-sm">{isAr ? 'لا يوجد مستخدمون بعد' : 'No users yet'}</p>
-                <p className="text-stone-300 text-xs mt-1">{isAr ? 'المستخدمون سيظهرون هنا بعد التسجيل' : 'Users will appear here after signing up'}</p>
+                <p className="text-stone-300 text-xs mt-1">{isAr ? 'المستخدمون سيظهرون هنا بعد التسجيل' : 'Users will appear after sign-up'}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-stone-50 border-b border-stone-100">
                     <tr>
-                      {[
-                        isAr ? 'المستخدم' : 'User',
-                        isAr ? 'البريد' : 'Email',
-                        isAr ? 'الشركة' : 'Company',
-                        isAr ? 'تاريخ التسجيل' : 'Joined',
-                      ].map((h, i) => (
+                      {[isAr?'المستخدم':'User', isAr?'البريد':'Email', isAr?'الشركة':'Company', isAr?'تاريخ التسجيل':'Joined'].map((h,i) => (
                         <th key={i} className="text-right px-4 py-3 text-xs font-semibold text-stone-500">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-50">
                     {users.map((u, i) => (
-                      <tr key={u.id || i} className="hover:bg-stone-50 transition-colors">
+                      <tr key={u.id||i} className="hover:bg-stone-50 transition-colors">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-sm font-bold text-amber-700 shrink-0">
-                              {(u.full_name || u.email || '?')[0].toUpperCase()}
+                              {(u.full_name||u.email||'?')[0].toUpperCase()}
                             </div>
-                            <span className="font-medium">{u.full_name || isAr ? 'مستخدم' : 'User'}</span>
+                            <span className="font-medium">{u.full_name || (isAr ? 'مستخدم' : 'User')}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-stone-500 font-mono text-xs">{u.email || '—'}</td>
-                        <td className="px-4 py-3 text-stone-600">{u.company_name || '—'}</td>
+                        <td className="px-4 py-3 text-stone-500 font-mono text-xs">{u.email||'—'}</td>
+                        <td className="px-4 py-3 text-stone-600">{u.company_name||'—'}</td>
                         <td className="px-4 py-3 text-stone-400 text-xs">
                           {u.created_at ? new Date(u.created_at).toLocaleDateString('ar-SA') : '—'}
                         </td>
