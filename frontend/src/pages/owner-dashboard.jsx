@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Sparkles,
   Globe,
@@ -10,7 +11,10 @@ import {
   MessageCircle,
   ArrowUpRight,
   ArrowDownRight,
+  LogOut,
+  Loader2,
 } from "lucide-react";
+import { getSession, getUser, signOut } from '../lib/supabase'
 
 const FontImport = () => (
   <style>{`
@@ -94,12 +98,39 @@ const T = {
 };
 
 export default function OwnerDashboard() {
+  const navigate = useNavigate()
   const [lang, setLang] = useState("ar");
+  const [user, setUser] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
   const isAr = lang === "ar";
   const t = T[lang];
   const dir = isAr ? "rtl" : "ltr";
   const fontDisplay = isAr ? "font-display-ar" : "font-display-en";
   const fontBody = isAr ? "font-body-ar" : "font-body-en";
+
+  useEffect(() => {
+    getSession().then(session => {
+      if (!session) {
+        navigate('/auth')
+      } else {
+        getUser().then(u => setUser(u))
+        setAuthLoading(false)
+      }
+    })
+  }, [navigate])
+
+  const handleSignOut = async () => {
+    await signOut()
+    navigate('/')
+  }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-stone-50">
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+      </div>
+    )
+  }
 
   const maxVisit = Math.max(...WEEKLY_VISITS);
   const days = DAY_LABELS[lang];
@@ -137,12 +168,18 @@ export default function OwnerDashboard() {
         <div className="flex items-center justify-between flex-wrap gap-3 mb-8">
           <div>
             <span className="text-xs text-teal-700 font-semibold uppercase tracking-wide">{t.dashboard}</span>
-            <h1 className={`${fontDisplay} text-2xl font-bold mt-1`}>{t.greeting}</h1>
+            <h1 className={`${fontDisplay} text-2xl font-bold mt-1`}>{isAr ? `أهلًا، ${user?.user_metadata?.full_name || user?.email || 'بك'}` : `Hey, ${user?.user_metadata?.full_name || user?.email || 'there'}`}</h1>
           </div>
-          <button className="flex items-center gap-2 border border-stone-300 hover:border-stone-400 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors bg-white">
-            <Settings className="w-4 h-4" />
-            {t.settings}
-          </button>
+          <div className="flex items-center gap-2">
+            <button className="flex items-center gap-2 border border-stone-300 hover:border-stone-400 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors bg-white">
+              <Settings className="w-4 h-4" />
+              {t.settings}
+            </button>
+            <button onClick={handleSignOut} className="flex items-center gap-2 border border-red-200 hover:border-red-400 text-red-600 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors bg-white">
+              <LogOut className="w-4 h-4" />
+              {isAr ? 'تسجيل الخروج' : 'Sign Out'}
+            </button>
+          </div>
         </div>
 
         {/* Stat cards */}
