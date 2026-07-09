@@ -266,6 +266,56 @@ app.post("/api/demo/chat", async (req, res) => {
   }
 });
 
+
+/**
+ * POST /api/payments/stcpay
+ * Body: { mobile, amountSAR, description, name, email }
+ * Initiates STC Pay payment via Moyasar — returns transactionUrl for OTP redirect
+ */
+app.post("/api/payments/stcpay", async (req, res) => {
+  const { mobile, amountSAR, description, name, email } = req.body;
+  if (!mobile || !amountSAR) {
+    return res.status(400).json({ error: "mobile and amountSAR are required" });
+  }
+  const amountHalalas = Math.round(amountSAR * 100);
+  const internalId = uuid();
+  try {
+    const { ok, status, data: payment } = await moyasarFetch("/payments", {
+      method: "POST",
+      body: JSON.stringify({
+        amount: amountHalalas,
+        currency: "SAR",
+        description: description || "Agent Souq subscription",
+        callback_url: CALLBACK_URL,
+        source: { type: "stcpay", mobile },
+      }),
+    });
+    insertPayment({
+      id: internalId,
+      moyasarId: payment.id || null,
+      status: payment.status || "failed",
+      amountHalalas,
+      description,
+      customerName: name,
+      customerEmail: email,
+      method: "stcpay",
+      rawResponse: payment,
+    });
+    if (!ok) {
+      return res.status(status).json({ error: payment.message || "STC Pay failed", details: payment });
+    }
+    res.json({
+      internalId,
+      id: payment.id,
+      status: payment.status,
+      transactionUrl: payment.source?.transaction_url || null,
+    });
+  } catch (err) {
+    console.error("STC Pay error:", err);
+    res.status(502).json({ error: "Could not reach Moyasar" });
+  }
+});
+
 app.get("/health", (req, res) => res.json({ ok: true, env: NODE_ENV }));
 
 app.listen(PORT, () => {
